@@ -1,0 +1,61 @@
+---
+
+- name: Enable internet services
+  hosts: node1
+  become: yes
+  tasks:
+  - name: ensure firewalld is at the latest version
+    yum: name=firewalld state=latest
+  - name: ensure httpd is at the latest version
+    yum: name=httpd state=latest
+  - name: ensure mariadb-server is at the latest version
+    yum: name=mariadb-server state=latest
+  - name: ensure php is at the latest version
+    yum: name=php state=latest
+  - name: ensure php-mysqlnd is at the latest version
+    yum: name=php-mysqlnd state=latest
+  - name: firewalld enabled and running
+    service:
+      name: firewalld
+      enabled: true
+      state: started
+  - name: firewalld permits access to httpd service
+    firewalld:
+      service: http
+      permanent: true
+      state: enabled
+      immediate: true
+  - name: httpd and mariadb - enable and run
+    service:
+      name: '{{ item }}'
+      enabled: true
+      state: started
+    loop:
+    - httpd
+    - mariadb
+  - name: Download foo.conf
+    get_url:
+      url: http://www.brainjar.com/java/host/test.html
+      dest: /var/www/html/index.html
+      mode: '0644'
+
+- name: test connection to web from node1 (same server)
+  hosts: node1
+  become: no
+  tasks:
+  - name: connect to web from node1
+    uri:
+      url: http://localhost
+      return_content: yes
+      status_code: 200
+
+- name: test connection to web from ansible-engine (another server)
+  hosts: ansible-engine
+  become: no
+  tasks:
+  - name: connect to web from ansible-engine
+    uri:
+      url: http://node1
+      return_content: yes
+      status_code: 200
+
